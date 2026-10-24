@@ -1,0 +1,1 @@
+window.GALLERY={"site":{"name":"作品集","bio":""},"works":[]};
