@@ -33,3 +33,9 @@ python3 -m http.server 8000 --directory _site
 - images/：上传画作
 - scripts/build.py：生成图片与作品清单
 - .github/workflows/pages.yml：自动部署
+
+## 分类
+在 artworks.json 对应图片的信息里添加 `"category": "茶吧"`。网页自动生成分类按钮。大图左右切换仅浏览当前分类；未分类作品保留在“全部”中，也可以通过“未分类”查看。
+
+## 画作版权
+site.json 中 copyrightHolder、rights 和 rightsEnglish 控制画作署名与中英版权说明，显示在页脚和大图下方。name 控制网站标题。画作保留所有权利。

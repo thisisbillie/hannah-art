@@ -18,7 +18,7 @@ for path in sorted((ROOT/'images').iterdir(),key=lambda p:p.name.casefold()):
             resized=im.copy(); resized.thumbnail((limit,limit))
             resized.save(out/'art'/f'{key}-{label}.webp',quality=quality)
     info=meta.get(path.name,{})
-    works.append(dict(title=info.get('title',path.stem),width=w,height=h,thumb=f'art/{key}-thumb.webp',full=f'art/{key}-full.webp',**{k:info.get(k,'') for k in ['year','medium','size','description']},order=info.get('order',9999)))
+    works.append(dict(title=info.get('title',path.stem),width=w,height=h,thumb=f'art/{key}-thumb.webp',full=f'art/{key}-full.webp',**{k:info.get(k,'') for k in ['year','medium','size','description','category']},order=info.get('order',9999)))
 works.sort(key=lambda w:w['order'])
 for name in ['index.html','style.css','app.js']: shutil.copy(ROOT/name,out/name)
 (out/'gallery-data.js').write_text('window.GALLERY='+json.dumps(dict(site=site,works=works),ensure_ascii=False)+';',encoding='utf-8')
