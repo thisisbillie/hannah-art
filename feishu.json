@@ -1,0 +1,19 @@
+{
+  "appId": "cli_aa6020e68d38c0ec",
+  "wikiNodeToken": "TlEWw8HAViHU9okEKtZcoN7O6ph",
+  "tableId": "tbl2sWCpGUjyrHfS",
+  "publishedValue": "发布",
+  "fields": {
+    "title": "作品名",
+    "image": "画作",
+    "year": "创作时间",
+    "emotions": "创作时的情绪",
+    "tools": "绘画工具",
+    "devices": "创作设备",
+    "medium": "软件或材料",
+    "series": "系列",
+    "description": "创作小记",
+    "status": "展示状态"
+  },
+  "publicSiteUrl": "https://thisisbillie.github.io/hannah-art/"
+}

@@ -2,6 +2,8 @@ name: Publish gallery
 on:
   push:
     branches: [main]
+  schedule:
+    - cron: '17 * * * *'
   workflow_dispatch:
 permissions:
   contents: read
@@ -9,23 +11,62 @@ permissions:
   id-token: write
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - name: Check sync configuration
+        id: source
+        env:
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          EVENT_NAME: ${{ github.event_name }}
+        shell: bash
+        run: |
+          if [ -n "$FEISHU_APP_SECRET" ]; then
+            echo 'mode=feishu' >> "$GITHUB_OUTPUT"
+          elif [ "$EVENT_NAME" = schedule ]; then
+            echo 'mode=skip' >> "$GITHUB_OUTPUT"
+            echo 'Feishu secret is not configured. Scheduled sync skipped.'
+          else
+            echo 'mode=local' >> "$GITHUB_OUTPUT"
+            echo 'Feishu secret is not configured. Building existing repository artworks.'
+          fi
       - uses: actions/setup-python@v5
+        if: steps.source.outputs.mode != 'skip'
         with:
           python-version: '3.12'
-      - run: pip install -r requirements.txt
-      - run: python scripts/build.py
+      - name: Install dependencies
+        if: steps.source.outputs.mode != 'skip'
+        run: pip install -r requirements.txt
+      - name: Build gallery from Feishu
+        id: feishu
+        if: steps.source.outputs.mode == 'feishu'
+        env:
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          EVENT_NAME: ${{ github.event_name }}
+        shell: bash
+        run: |
+          if [ "$EVENT_NAME" = schedule ]; then
+            python scripts/build.py --feishu --check-updates
+          else
+            python scripts/build.py --feishu
+          fi
+      - name: Build existing repository artworks
+        if: steps.source.outputs.mode == 'local'
+        run: python scripts/build.py
       - uses: actions/configure-pages@v5
+        if: steps.source.outputs.mode == 'local' || steps.feishu.outputs.built == 'true'
       - uses: actions/upload-pages-artifact@v3
+        if: steps.source.outputs.mode == 'local' || steps.feishu.outputs.built == 'true'
         with:
           path: _site
+          retention-days: 1
       - uses: actions/deploy-pages@v4
+        if: steps.source.outputs.mode == 'local' || steps.feishu.outputs.built == 'true'
         id: deployment
