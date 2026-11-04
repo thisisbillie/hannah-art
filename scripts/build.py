@@ -18,8 +18,14 @@ for path in sorted((ROOT/'images').iterdir(),key=lambda p:p.name.casefold()):
             resized=im.copy(); resized.thumbnail((limit,limit))
             resized.save(out/'art'/f'{key}-{label}.webp',quality=quality)
     info=meta.get(path.name,{})
-    works.append(dict(title=info.get('title',path.stem),width=w,height=h,thumb=f'art/{key}-thumb.webp',full=f'art/{key}-full.webp',**{k:info.get(k,'') for k in ['year','medium','size','description','category']},order=info.get('order',9999)))
+    if 'series' not in info: info['series']=info.get('category','')
+    emotions=info.get('emotions',[])
+    if not isinstance(emotions,list) or any(not isinstance(e,str) for e in emotions):
+        raise ValueError(f'{path.name}: emotions 必须是字符串列表')
+    info['emotions']=list(dict.fromkeys(e.strip() for e in emotions if e.strip()))
+    works.append(dict(title=info.get('title',path.stem),width=w,height=h,thumb=f'art/{key}-thumb.webp',full=f'art/{key}-full.webp',**{k:info.get(k,'') for k in ['year','medium','size','description','series']},emotions=info.get('emotions',[]),order=info.get('order',9999)))
 works.sort(key=lambda w:w['order'])
 for name in ['index.html','style.css','app.js']: shutil.copy(ROOT/name,out/name)
 (out/'gallery-data.js').write_text('window.GALLERY='+json.dumps(dict(site=site,works=works),ensure_ascii=False)+';',encoding='utf-8')
 print(f'Built {len(works)} artworks into _site')
+
