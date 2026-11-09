@@ -9,6 +9,9 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 from PIL import Image
+from pillow_heif import register_heif_opener
+
+register_heif_opener()
 
 API = 'https://open.feishu.cn/open-apis'
 MAX_IMAGE_BYTES = 50 * 1024 * 1024
@@ -177,8 +180,8 @@ def fetch_published(root, destination, *, check_updates=False):
         try:
             with Image.open(io.BytesIO(raw)) as source:
                 detected = source.format or detected
-                if detected not in ('JPEG', 'PNG', 'WEBP'):
-                    raise RuntimeError(f'Unsupported published image: {label}; detected={detected}. Use JPG, PNG or WebP.')
+                if detected not in ('JPEG', 'PNG', 'WEBP', 'HEIF'):
+                    raise RuntimeError(f'Unsupported published image: {label}; detected={detected}. Use JPG, PNG, WebP or HEIC/HEIF.')
                 source.verify()
         except (OSError, ValueError, SyntaxError) as exc:
             raise RuntimeError(

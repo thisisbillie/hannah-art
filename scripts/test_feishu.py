@@ -103,6 +103,46 @@ class SyncTests(unittest.TestCase):
                     with self.assertRaisesRegex(RuntimeError, '展示状态'):
                         feishu.fetch_published(root, root / 'missing')
 
+    def test_heic_attachment_builds_webp(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / 'feishu.json').write_text(json.dumps(CONFIG))
+            (root / 'site.json').write_text(json.dumps({'name': 'HEIC test'}))
+            for name in ['index.html', 'style.css', 'app.js']:
+                (root / name).write_text('test')
+            photo = Image.new('RGB', (80, 120), 'blue')
+            out = io.BytesIO()
+            photo.save(out, format='HEIF', quality=90)
+            heic = out.getvalue()
+            self.assertEqual(heic[4:8], b'ftyp')
+            row = record()
+            row['fields']['画作'][0]['name'] = 'IMG_5679.HEIC'
+            FakeClient.rows = [row]
+            with patch.dict('os.environ', {'FEISHU_APP_SECRET': 'test-secret'}), patch.object(feishu, 'Client', FakeClient):
+                with patch.object(FakeClient, 'request', return_value=heic):
+                    images, meta, _ = feishu.fetch_published(root, root / 'temp')
+                with patch.object(build, 'ROOT', root):
+                    build.build(images, meta)
+            data = json.loads((root / '_site/gallery-data.js').read_text()[15:-1])
+            self.assertEqual(len(data['works']), 1)
+            self.assertEqual((data['works'][0]['width'], data['works'][0]['height']), (80, 120))
+            for path in (root / '_site/art').iterdir():
+                with Image.open(path) as image:
+                    image.load()
+                    self.assertEqual(image.format, 'WEBP')
+
+    def test_invalid_attachment_identifies_work_without_logging_payload(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / 'feishu.json').write_text(json.dumps(CONFIG))
+            FakeClient.rows = [record()]
+            with patch.dict('os.environ', {'FEISHU_APP_SECRET': 'test-secret'}), patch.object(feishu, 'Client', FakeClient):
+                with patch.object(FakeClient, 'request', return_value=b'private-invalid-payload'):
+                    with self.assertRaises(RuntimeError) as error:
+                        feishu.fetch_published(root, root / 'temp')
+            self.assertIn('茶', str(error.exception))
+            self.assertNotIn('private-invalid-payload', str(error.exception))
+
     def test_auth_error_never_echoes_response_credentials(self):
         class Response(io.BytesIO):
             headers = {'Content-Type': 'application/json'}

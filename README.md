@@ -1,6 +1,6 @@
 
 ## 图片
-支持 JPG/JPEG、PNG、WebP。
+仓库 images/ 支持 JPG/JPEG、PNG、WebP。飞书上传另外支持 iPhone 的 HEIC/HEIF 图片，构建时自动转换为网站用的 WebP；无需手动转换附件。
 
 ## 可选：作品信息与排序
 编辑 artworks.json，键名必须与 images 文件名完全一致；没有配置的图片仍会自动出现。默认按文件名排序，order 越小越靠前：
