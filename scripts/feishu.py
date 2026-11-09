@@ -167,14 +167,25 @@ def fetch_published(root, destination, *, check_updates=False):
         extra = {'bitablePerm': {'tableId': table_id, 'attachments': {field_ids[config['fields']['image']]: {record_id: [token]}}}}
         raw = client.request('/drive/v1/medias/' + urllib.parse.quote(token, safe='') + '/download',
                              query={'extra': json.dumps(extra, separators=(',', ':'))}, binary=True)
-        # Verify content before deployment. File names never become filesystem paths.
+        # Identify a failing published attachment without logging raw content or credentials.
+        label = json.dumps({'title': info['title'], 'file': image.get('name', '未命名附件')}, ensure_ascii=False)
+        detected = 'unrecognized'
+        if len(raw) >= 12 and raw[4:8] == b'ftyp':
+            detected = 'ISO-BMFF/' + raw[8:12].decode('ascii', errors='replace')
+        elif raw.lstrip().startswith((b'<', b'<!')):
+            detected = 'HTML/XML/SVG'
         try:
             with Image.open(io.BytesIO(raw)) as source:
-                if source.format not in ('JPEG', 'PNG', 'WEBP'):
-                    raise RuntimeError('已发布画作含不支持的图片格式，请使用 JPG、PNG 或 WebP。')
+                detected = source.format or detected
+                if detected not in ('JPEG', 'PNG', 'WEBP'):
+                    raise RuntimeError(f'Unsupported published image: {label}; detected={detected}. Use JPG, PNG or WebP.')
                 source.verify()
-        except (OSError, ValueError):
-            raise RuntimeError('已发布画作附件无法作为图片读取，请检查附件。') from None
+        except (OSError, ValueError, SyntaxError) as exc:
+            raise RuntimeError(
+                f'Cannot read published image: {label}; detected={detected}; '
+                f'bytes={len(raw)}; decoder={type(exc).__name__}. '
+                'Check the attachment format or re-export as JPG/PNG. The live gallery was not changed.'
+            ) from None
         name = hashlib.sha256((record_id + ':' + token).encode()).hexdigest()[:24] + '.jpg'
         (image_dir / name).write_bytes(raw)
         info['order'] = index
